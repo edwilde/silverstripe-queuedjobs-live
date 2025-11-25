@@ -1,0 +1,38 @@
+{
+  "name": "silverstripe-queuedjobs-live",
+  "version": "1.0.0",
+  "description": "Live updates for SilverStripe Queued Jobs admin panel",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:js && npm run build:css",
+    "build:js": "npx terser client/src/queuedjobs-admin.js -o client/dist/queuedjobs-admin.js --compress --mangle",
+    "build:css": "cp client/src/queuedjobs-admin.css client/dist/queuedjobs-admin.css",
+    "dev": "npm run build:js:dev && npm run build:css",
+    "build:js:dev": "cp client/src/queuedjobs-admin.js client/dist/queuedjobs-admin.js",
+    "watch": "npm run dev && npm run watch:files",
+    "watch:files": "npx watch 'npm run dev' client/src",
+    "test": "npm run test:js && npm run test:php",
+    "test:js": "jest",
+    "test:js:watch": "jest --watch",
+    "test:js:coverage": "jest --coverage",
+    "test:php": "vendor/bin/phpunit",
+    "lint": "eslint client/src/**/*.js"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@babel/preset-env": "^7.24.0",
+    "babel-jest": "^29.7.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "terser": "^5.31.0",
+    "watch": "^1.0.2"
+  },
+  "keywords": [
+    "silverstripe",
+    "queuedjobs",
+    "live-updates"
+  ],
+  "author": "",
+  "license": "BSD-3-Clause"
+}

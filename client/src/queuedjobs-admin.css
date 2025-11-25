@@ -1,0 +1,156 @@
+/**
+ * Queued Jobs Live Refresh - Styles
+ *
+ * Provides styling for the play/pause toggle button and notification system.
+ */
+
+/* ==========================================================================
+   Play/Pause Toggle Button
+   ========================================================================== */
+
+/**
+ * Base button styling - subtle outline style that matches SilverStripe admin UI
+ * WCAG 2.2 AA compliant: min 44x44px touch target, sufficient contrast
+ */
+.queuedjobs-live-toggle {
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+	margin-top: -4px;
+    margin-right: 8px;
+    vertical-align: middle;
+    min-width: 44px;
+    min-height: 44px;
+    position: relative;
+}
+
+/* Screen reader only text */
+.queuedjobs-live-toggle .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Spin the icon when refreshing */
+.queuedjobs-live-toggle.refreshing .toggle-icon {
+    animation: spin 1s linear infinite;
+	animation-delay: 200ms;
+}
+
+/* Icon styling with smooth transitions */
+.queuedjobs-live-toggle .toggle-icon {
+    display: inline-block;
+    font-size: 16px;
+    line-height: 1;
+    width: 16px;
+    text-align: center;
+    transition: 100ms opacity 150ms ease-in-out;
+    opacity: 1;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+/* Spin animation for refresh indicator */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================================================
+   Notification System
+   ========================================================================== */
+
+/**
+ * Error/info notification that slides in from the right
+ * WCAG 2.2 AA compliant: role="alert", sufficient contrast, dismissible
+ */
+.queuedjobs-live-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #d32f2f;
+    color: white;
+    padding: 12px 40px 12px 16px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 10001;
+    max-width: 400px;
+    animation: slideIn 0.3s ease;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Slide-in animation */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Close button within notification - WCAG 2.2 AA: 24x24px minimum */
+.queuedjobs-live-notification .close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    color: white;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    min-width: 24px;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.queuedjobs-live-notification .close-btn:hover,
+.queuedjobs-live-notification .close-btn:focus {
+    background: rgba(255, 255, 255, 0.3);
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+
+/* Button is inserted directly into DOM, no container needed */
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    /* Smaller button on mobile */
+    .queuedjobs-live-toggle {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+
+    /* Full-width notifications on mobile */
+    .queuedjobs-live-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}

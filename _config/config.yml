@@ -1,0 +1,8 @@
+---
+Name: queuedjobs-live
+After:
+  - '#queuedjobs'
+---
+Symbiote\QueuedJobs\Controllers\QueuedJobsAdmin:
+  extensions:
+    - EdWilde\QueuedJobsLive\QueuedJobsAdminExtension
