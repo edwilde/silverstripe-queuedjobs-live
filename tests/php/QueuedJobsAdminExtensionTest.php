@@ -10,9 +10,9 @@ use Symbiote\QueuedJobs\Controllers\QueuedJobsAdmin;
 
 /**
  * Tests for QueuedJobsAdminExtension.
- * 
+ *
  * Verifies that the extension properly registers assets and modifies the form.
- * 
+ *
  * @package EdWilde\QueuedJobsLive\Tests
  */
 class QueuedJobsAdminExtensionTest extends SapphireTest
@@ -29,7 +29,7 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
     {
         $admin = QueuedJobsAdmin::create();
         $extensions = $admin->getExtensionInstances();
-        
+
         $hasExtension = false;
         foreach ($extensions as $extension) {
             if ($extension instanceof QueuedJobsAdminExtension) {
@@ -37,7 +37,7 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
                 break;
             }
         }
-        
+
         $this->assertTrue(
             $hasExtension,
             'QueuedJobsAdmin should have QueuedJobsAdminExtension applied'
@@ -50,16 +50,16 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
     public function testUpdateEditFormAddsJavaScript()
     {
         Requirements::clear();
-        
+
         $admin = QueuedJobsAdmin::create();
         $form = Form::create($admin, 'TestForm');
-        
+
         $extension = new QueuedJobsAdminExtension();
         $extension->setOwner($admin);
         $extension->updateEditForm($form);
-        
+
         $javascript = Requirements::backend()->getJavascript();
-        
+
         $hasQueuedJobsJS = false;
         foreach ($javascript as $file => $attrs) {
             if (strpos($file, 'queuedjobs-admin.js') !== false) {
@@ -67,12 +67,12 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
                 break;
             }
         }
-        
+
         $this->assertTrue(
             $hasQueuedJobsJS,
             'JavaScript file should be registered'
         );
-        
+
         Requirements::clear();
     }
 
@@ -82,16 +82,16 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
     public function testUpdateEditFormAddsCSS()
     {
         Requirements::clear();
-        
+
         $admin = QueuedJobsAdmin::create();
         $form = Form::create($admin, 'TestForm');
-        
+
         $extension = new QueuedJobsAdminExtension();
         $extension->setOwner($admin);
         $extension->updateEditForm($form);
-        
+
         $css = Requirements::backend()->getCSS();
-        
+
         $hasQueuedJobsCSS = false;
         foreach ($css as $file => $attrs) {
             if (strpos($file, 'queuedjobs-admin.css') !== false) {
@@ -99,12 +99,12 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
                 break;
             }
         }
-        
+
         $this->assertTrue(
             $hasQueuedJobsCSS,
             'CSS file should be registered'
         );
-        
+
         Requirements::clear();
     }
 
@@ -115,16 +115,13 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
     {
         $admin = QueuedJobsAdmin::create();
         $form = Form::create($admin, 'TestForm');
-        
+
         $extension = new QueuedJobsAdminExtension();
         $extension->setOwner($admin);
         $extension->updateEditForm($form);
-        
-        $extraClasses = $form->extraClasses();
-        
-        $this->assertStringContainsString(
-            'queuedjobs-live-enabled',
-            $extraClasses,
+
+        $this->assertTrue(
+            $form->hasExtraClass('queuedjobs-live-enabled'),
             'Form should have queuedjobs-live-enabled class'
         );
     }
@@ -136,11 +133,11 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
     {
         $admin = QueuedJobsAdmin::create();
         $form = Form::create($admin, 'TestForm');
-        
+
         $extension = new QueuedJobsAdminExtension();
         $extension->setOwner($admin);
         $result = $extension->updateEditForm($form);
-        
+
         $this->assertInstanceOf(
             Form::class,
             $result,
