@@ -27,8 +27,13 @@ describe('QueuedJobsLiveRefresh', () => {
                 </div>
                 <div class="ss-gridfield">
                     <table class="grid-field__table">
-                        <tr><td>Job 1</td></tr>
+                        <thead><tr><th>Title</th></tr></thead>
+                        <tbody><tr><td>Job 1</td></tr></tbody>
+                        <tfoot><tr><td>1 item</td></tr></tfoot>
                     </table>
+                </div>
+                <div class="btn-toolbar">
+                    <input type="submit" name="action_createjob" value="Create new job" id="action_createjob">
                 </div>
             </form>
         `;
@@ -38,7 +43,7 @@ describe('QueuedJobsLiveRefresh', () => {
         global.fetch = jest.fn().mockResolvedValue({
             ok: true,
             redirected: false,
-            text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"></table></div>')
+            text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"><thead><tr><th>Title</th></tr></thead><tbody><tr><td>Updated Job</td></tr></tbody><tfoot><tr><td>1 item</td></tr></tfoot></table></div>')
         });
 
         // Suppress expected console.error calls during tests
@@ -61,7 +66,17 @@ describe('QueuedJobsLiveRefresh', () => {
             expect(button.type).toBe('button');
         });
 
-        test('creates button on pjax:end event', () => {
+        test('creates button on jQuery pjax:end event', () => {
+            // Set up jQuery mock before requiring the module
+            global.jQuery = jest.fn(() => ({
+                on: jest.fn((event, callback) => {
+                    if (event === 'pjax:end') {
+                        // Store callback to trigger later
+                        global.jQuery._pjaxCallback = callback;
+                    }
+                })
+            }));
+
             require('../../client/src/queuedjobs-admin.js');
 
             // Remove button to simulate navigation away
@@ -70,12 +85,16 @@ describe('QueuedJobsLiveRefresh', () => {
                 button.remove();
             }
 
-            // Simulate PJAX navigation
-            const event = new Event('pjax:end');
-            document.dispatchEvent(event);
+            // Trigger the stored jQuery pjax:end callback
+            if (global.jQuery._pjaxCallback) {
+                global.jQuery._pjaxCallback();
+            }
 
             button = document.querySelector('.queuedjobs-live-toggle');
             expect(button).toBeTruthy();
+
+            // Clean up
+            delete global.jQuery;
         });
 
         test('creates button on cms-content-loaded event', () => {
@@ -190,7 +209,7 @@ describe('QueuedJobsLiveRefresh', () => {
             global.fetch.mockResolvedValue({
                 ok: true,
                 redirected: false,
-                text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"><tr><td>Job 2</td></tr></table></div>')
+                text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"><tbody><tr><td>Job 2</td></tr></tbody></table></div>')
             });
 
             require('../../client/src/queuedjobs-admin.js');
@@ -215,7 +234,7 @@ describe('QueuedJobsLiveRefresh', () => {
             global.fetch.mockResolvedValue({
                 ok: true,
                 redirected: false,
-                text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"></table></div>')
+                text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"><tbody><tr><td>Job</td></tr></tbody></table></div>')
             });
 
             require('../../client/src/queuedjobs-admin.js');
@@ -301,7 +320,7 @@ describe('QueuedJobsLiveRefresh', () => {
                 text: () => Promise.resolve(`
                     <html>
                         <body>
-                            <div class="ss-gridfield"><table class="grid-field__table"><tr><td>Updated</td></tr></table></div>
+                            <div class="ss-gridfield"><table class="grid-field__table"><tbody><tr><td>Updated</td></tr></tbody></table></div>
                         </body>
                     </html>
                 `)
@@ -340,7 +359,7 @@ describe('QueuedJobsLiveRefresh', () => {
             resolvePromise({
                 ok: true,
                 redirected: false,
-                text: () => Promise.resolve('<div class="ss-gridfield"><table></table></div>')
+                text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"><tbody><tr><td>Job</td></tr></tbody></table></div>')
             });
 
             await Promise.resolve();
@@ -357,7 +376,7 @@ describe('QueuedJobsLiveRefresh', () => {
             global.fetch.mockResolvedValue({
                 ok: true,
                 redirected: false,
-                text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"></table></div>')
+                text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"><tbody><tr><td>Job</td></tr></tbody></table></div>')
             });
 
             require('../../client/src/queuedjobs-admin.js');
@@ -384,7 +403,7 @@ describe('QueuedJobsLiveRefresh', () => {
             global.fetch.mockResolvedValue({
                 ok: true,
                 redirected: false,
-                text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"></table></div>')
+                text: () => Promise.resolve('<div class="ss-gridfield"><table class="grid-field__table"><tbody><tr><td>Job</td></tr></tbody></table></div>')
             });
 
             require('../../client/src/queuedjobs-admin.js');

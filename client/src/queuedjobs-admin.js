@@ -47,12 +47,10 @@
                 this.setup();
             }
 
-            // Listen for various CMS PJAX navigation events
-            // SilverStripe CMS uses jQuery PJAX, so we need multiple event listeners
-            document.addEventListener('pjax:end', () => this.setup());
+            // Listen for CMS navigation events
             window.addEventListener('cms-content-loaded', () => this.setup());
 
-            // Also listen on jQuery if available (SilverStripe uses jQuery PJAX)
+            // SilverStripe CMS uses jQuery PJAX
             if (typeof jQuery !== 'undefined') {
                 jQuery(document).on('pjax:end', () => this.setup());
             }
@@ -85,7 +83,6 @@
             }
 
             this.createToggleButton();
-            this.createLoadingIndicator();
             this.attachEventListeners();
         }
 
@@ -102,6 +99,17 @@
             button.setAttribute('aria-pressed', 'false');
             button.setAttribute('title', 'Toggle auto-refresh');
             button.innerHTML = '<span class="toggle-icon" aria-hidden="true">▶</span><span class="visually-hidden">Start auto-refresh</span>';
+
+            // If we're currently polling, set the active state immediately
+            if (this.isPolling) {
+                button.classList.add('active');
+                button.setAttribute('aria-label', 'Toggle auto-refresh. Currently running.');
+                button.setAttribute('aria-pressed', 'true');
+                const icon = button.querySelector('.toggle-icon');
+                const label = button.querySelector('.visually-hidden');
+                if (icon) icon.textContent = '⏸';
+                if (label) label.textContent = 'Stop auto-refresh';
+            }
 
             button.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -145,14 +153,6 @@
         }
 
         /**
-         * Placeholder for loading indicator.
-         * Loading state is now shown via button styling instead of popup.
-         */
-        createLoadingIndicator() {
-            // Loading state is handled by adding 'refreshing' class to button
-        }
-
-        /**
          * Attach global event listeners for smart pausing and cleanup.
          * Only attaches once to prevent duplicate listeners.
          */
@@ -163,10 +163,28 @@
             }
             this.listenersAttached = true;
 
-            // Pause polling when user interacts with GridField
+            // Pause polling when user interacts with GridField (but not the create job button)
             document.addEventListener('click', (e) => {
+                // Don't pause for the create job button - we handle that separately
+                const isCreateJobButton = e.target.closest('#action_createjob, input[name="action_createjob"], button[name="action_createjob"]');
+                if (isCreateJobButton) {
+                    return;
+                }
+                
                 if (e.target.closest('.action, .gridfield-button-row, .ss-gridfield')) {
                     this.pauseOnInteraction();
+                }
+            });
+
+            // When "Create new job" is clicked and auto-refresh is running,
+            // trigger a refresh after a delay to show the new job
+            document.addEventListener('click', (e) => {
+                const createJobButton = e.target.closest('#action_createjob, input[name="action_createjob"], button[name="action_createjob"]');
+                if (createJobButton && this.isPolling) {
+                    // Wait for the form submission to complete, then refresh
+                    setTimeout(() => {
+                        this.poll();
+                    }, 1500);
                 }
             });
 
@@ -199,13 +217,12 @@
                 const gridField = document.querySelector('.ss-gridfield, .grid-field');
 
                 if (!button) {
-                    // Button was removed, re-create it
+                    // Button was removed, re-create it (state is set in createToggleButton)
                     this.createToggleButton();
-                    // Restore the active state if we were polling
-                    if (this.isPolling) {
-                        this.updateButtonState();
-                    }
                 } else {
+                    // Update our reference to the button in the DOM
+                    this.toggleButton = button;
+                    
                     // Check if filter is open/closed
                     const filterIsOpen = gridField && gridField.classList.contains('show-filter');
 
@@ -275,6 +292,9 @@
          */
         cleanup() {
             this.stopPolling();
+            if (this.interactionTimeout) {
+                clearTimeout(this.interactionTimeout);
+            }
             if (this.observer) {
                 this.observer.disconnect();
             }
@@ -396,7 +416,7 @@
 
         /**
          * Update the GridField table with new data from HTML response.
-         * Only replaces the table element to preserve buttons and controls.
+         * Only replaces the tbody content to preserve all other UI elements and event handlers.
          *
          * @param {string} html - The full HTML response from the server
          */
@@ -404,23 +424,30 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
 
-            // Find only the table element, not the entire GridField container
-            const newTable = doc.querySelector('.grid-field__table, table.ss-gridfield-table');
-            const currentTable = document.querySelector('.grid-field__table, table.ss-gridfield-table');
+            // Find only the tbody element - this is the minimal update needed
+            // This preserves thead, tfoot, and all other GridField elements
+            const newTbody = doc.querySelector('.grid-field__table tbody, table.ss-gridfield-table tbody');
+            const currentTbody = document.querySelector('.grid-field__table tbody, table.ss-gridfield-table tbody');
 
-            if (newTable && currentTable) {
+            // Also update the tfoot for pagination info
+            const newTfoot = doc.querySelector('.grid-field__table tfoot, table.ss-gridfield-table tfoot');
+            const currentTfoot = document.querySelector('.grid-field__table tfoot, table.ss-gridfield-table tfoot');
+
+            if (newTbody && currentTbody) {
                 const activeElement = document.activeElement;
                 const activeElementSelector = this.getElementSelector(activeElement);
-                const isInsideTable = activeElement.closest('.grid-field__table, table.ss-gridfield-table') === currentTable;
+                const isInsideTbody = currentTbody.contains(activeElement);
 
-                // Replace only the table, preserving buttons and other UI
-                currentTable.parentNode.replaceChild(
-                    document.importNode(newTable, true),
-                    currentTable
-                );
+                // Replace only the tbody content
+                currentTbody.innerHTML = newTbody.innerHTML;
 
-                // Restore focus if it was outside the table
-                if (activeElementSelector && !isInsideTable) {
+                // Update tfoot if present (for pagination counts)
+                if (newTfoot && currentTfoot) {
+                    currentTfoot.innerHTML = newTfoot.innerHTML;
+                }
+
+                // Restore focus if it was outside the tbody
+                if (activeElementSelector && !isInsideTbody) {
                     const elementToFocus = document.querySelector(activeElementSelector);
                     if (elementToFocus && elementToFocus !== document.body) {
                         elementToFocus.focus();

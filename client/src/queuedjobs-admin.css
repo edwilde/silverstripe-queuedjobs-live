@@ -17,11 +17,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-	margin-top: -4px;
-    margin-right: 8px;
+	margin-top: -2px;
+    margin-right: 0;
     vertical-align: middle;
     min-width: 44px;
-    min-height: 44px;
+    min-height: 38px;
     position: relative;
 }
 
@@ -128,12 +128,6 @@
     outline: 2px solid white;
     outline-offset: 2px;
 }
-
-/* ==========================================================================
-   Layout
-   ========================================================================== */
-
-/* Button is inserted directly into DOM, no container needed */
 
 /* ==========================================================================
    Responsive Design
