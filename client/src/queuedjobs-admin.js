@@ -8,6 +8,7 @@
  * @author Ed Wilde
  * @version 1.0.0
  */
+/* global jQuery */
 (function() {
     'use strict';
 
@@ -50,12 +51,12 @@
             // SilverStripe CMS uses jQuery PJAX, so we need multiple event listeners
             document.addEventListener('pjax:end', () => this.setup());
             window.addEventListener('cms-content-loaded', () => this.setup());
-            
+
             // Also listen on jQuery if available (SilverStripe uses jQuery PJAX)
             if (typeof jQuery !== 'undefined') {
                 jQuery(document).on('pjax:end', () => this.setup());
             }
-            
+
             // Periodically check if button needs to be created (fallback)
             // This handles cases where events don't fire reliably
             setInterval(() => {
@@ -116,20 +117,20 @@
          * Insert the button immediately before the filter button.
          * Handles different DOM structures that may occur during GridField updates.
          * Hides button if filter area is open (no filter button visible).
-         * 
+         *
          * @param {HTMLElement} button - The button element to insert
          */
         insertButtonBeforeFilter(button) {
             const filterButton = document.querySelector('button[name="showFilter"], .grid-field__filter-open');
             const gridField = document.querySelector('.ss-gridfield, .grid-field');
-            
+
             if (!filterButton) {
                 // Check if filter is open (has show-filter class)
                 if (gridField && gridField.classList.contains('show-filter')) {
                     // Filter is open, hide our button
                     button.style.display = 'none';
                     // Still need to insert it somewhere to keep reference
-                    const toolbar = document.querySelector('.cms-content-toolbar') || 
+                    const toolbar = document.querySelector('.cms-content-toolbar') ||
                                   document.querySelector('.cms-content-header');
                     if (toolbar) {
                         toolbar.appendChild(button);
@@ -192,11 +193,11 @@
             const form = document.querySelector('.queuedjobs-live-enabled');
             if (!form) return;
 
-            const observer = new MutationObserver((mutations) => {
+            const observer = new MutationObserver(() => {
                 const button = document.querySelector('.queuedjobs-live-toggle');
                 const filterButton = document.querySelector('button[name="showFilter"], .grid-field__filter-open');
                 const gridField = document.querySelector('.ss-gridfield, .grid-field');
-                
+
                 if (!button) {
                     // Button was removed, re-create it
                     this.createToggleButton();
@@ -207,7 +208,7 @@
                 } else {
                     // Check if filter is open/closed
                     const filterIsOpen = gridField && gridField.classList.contains('show-filter');
-                    
+
                     if (filterIsOpen && !filterButton) {
                         // Filter is open, hide button
                         button.style.display = 'none';
@@ -313,7 +314,7 @@
 
             // Fade out (100ms transition)
             icon.style.opacity = '0';
-            
+
             // Wait for fade out (100ms) + pause (200ms) before changing content
             setTimeout(() => {
                 if (this.isPolling) {
@@ -329,16 +330,16 @@
                     this.toggleButton.setAttribute('aria-label', 'Toggle auto-refresh. Currently stopped.');
                     this.toggleButton.setAttribute('aria-pressed', 'false');
                 }
-                
+
                 // Update transition for fade in
                 icon.style.transition = 'opacity 0.15s ease';
-                
+
                 // Trigger reflow to ensure transition applies
                 void icon.offsetHeight;
-                
+
                 // Fade in (150ms transition)
                 icon.style.opacity = '1';
-                
+
                 // Reset transition back to default after fade in completes
                 setTimeout(() => {
                     icon.style.transition = '';
@@ -494,7 +495,7 @@
             notification.className = 'queuedjobs-live-notification';
             notification.setAttribute('role', 'alert');
             notification.setAttribute('aria-live', 'assertive');
-            
+
             const messageSpan = document.createElement('span');
             messageSpan.textContent = message;
             notification.appendChild(messageSpan);
