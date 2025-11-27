@@ -148,3 +148,19 @@
         max-width: none;
     }
 }
+
+/* ==========================================================================
+   Live Refresh Optimizations
+   ========================================================================== */
+
+/* Optimize table for live updates */
+.grid-field__table {
+    will-change: contents;
+}
+
+/* Disable transitions during live refresh updates to prevent flicker */
+.queuedjobs-live-updating,
+.queuedjobs-live-updating * {
+    transition: none !important;
+    animation: none !important;
+}

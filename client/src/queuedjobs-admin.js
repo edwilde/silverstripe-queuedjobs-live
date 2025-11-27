@@ -170,7 +170,7 @@
                 if (isCreateJobButton) {
                     return;
                 }
-                
+
                 if (e.target.closest('.action, .gridfield-button-row, .ss-gridfield')) {
                     this.pauseOnInteraction();
                 }
@@ -222,7 +222,7 @@
                 } else {
                     // Update our reference to the button in the DOM
                     this.toggleButton = button;
-                    
+
                     // Check if filter is open/closed
                     const filterIsOpen = gridField && gridField.classList.contains('show-filter');
 
@@ -416,7 +416,7 @@
 
         /**
          * Update the GridField table with new data from HTML response.
-         * Only replaces the tbody content to preserve all other UI elements and event handlers.
+         * Uses diff-based updates to only modify changed rows, preventing flicker.
          *
          * @param {string} html - The full HTML response from the server
          */
@@ -424,29 +424,51 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
 
-            // Find only the tbody element - this is the minimal update needed
-            // This preserves thead, tfoot, and all other GridField elements
             const newTbody = doc.querySelector('.grid-field__table tbody, table.ss-gridfield-table tbody');
             const currentTbody = document.querySelector('.grid-field__table tbody, table.ss-gridfield-table tbody');
 
-            // Also update the tfoot for pagination info
             const newTfoot = doc.querySelector('.grid-field__table tfoot, table.ss-gridfield-table tfoot');
             const currentTfoot = document.querySelector('.grid-field__table tfoot, table.ss-gridfield-table tfoot');
 
             if (newTbody && currentTbody) {
+                // Quick check: compare normalized HTML to detect any changes
+                const currentHtml = this.normalizeHtml(currentTbody.innerHTML);
+                const newHtml = this.normalizeHtml(newTbody.innerHTML);
+                
+                const currentFootHtml = currentTfoot ? this.normalizeHtml(currentTfoot.innerHTML) : '';
+                const newFootHtml = newTfoot ? this.normalizeHtml(newTfoot.innerHTML) : '';
+                
+                // If nothing changed, don't touch the DOM at all
+                if (currentHtml === newHtml && currentFootHtml === newFootHtml) {
+                    return;
+                }
+
                 const activeElement = document.activeElement;
                 const activeElementSelector = this.getElementSelector(activeElement);
                 const isInsideTbody = currentTbody.contains(activeElement);
 
-                // Replace only the tbody content
-                currentTbody.innerHTML = newTbody.innerHTML;
-
-                // Update tfoot if present (for pagination counts)
-                if (newTfoot && currentTfoot) {
-                    currentTfoot.innerHTML = newTfoot.innerHTML;
+                // Add class to disable CSS transitions during update
+                const table = currentTbody.closest('table');
+                if (table) {
+                    table.classList.add('queuedjobs-live-updating');
                 }
 
-                // Restore focus if it was outside the tbody
+                // Diff and patch tbody rows
+                this.diffAndPatch(currentTbody, newTbody);
+
+                // Diff and patch tfoot if present
+                if (newTfoot && currentTfoot) {
+                    this.diffAndPatch(currentTfoot, newTfoot);
+                }
+
+                // Remove updating class after a microtask to ensure DOM has settled
+                if (table) {
+                    requestAnimationFrame(() => {
+                        table.classList.remove('queuedjobs-live-updating');
+                    });
+                }
+
+                // Restore focus if it was outside the updated area
                 if (activeElementSelector && !isInsideTbody) {
                     const elementToFocus = document.querySelector(activeElementSelector);
                     if (elementToFocus && elementToFocus !== document.body) {
@@ -459,6 +481,183 @@
                     window.scrollTo(0, this.scrollPosition);
                 }
             }
+        }
+
+        /**
+         * Normalize HTML for comparison by removing insignificant whitespace
+         * and action columns (which get JS-enhanced and always differ).
+         *
+         * @param {string} html - HTML string to normalize
+         * @return {string} Normalized HTML string
+         */
+        normalizeHtml(html) {
+            return html
+                .replace(/<td[^>]*class="[^"]*col-Actions[^"]*"[^>]*>[\s\S]*?<\/td>/gi, '')  // Remove action columns
+                .replace(/<td[^>]*class="[^"]*grid-field__col-compact[^"]*"[^>]*>[\s\S]*?<\/td>/gi, '')  // Remove compact action columns
+                .replace(/>\s+</g, '><')  // Remove whitespace between tags
+                .replace(/\s+/g, ' ')      // Collapse multiple spaces
+                .trim();
+        }
+
+        /**
+         * Diff two DOM elements and apply minimal changes.
+         * Compares children by data-id attribute or position, updating only what changed.
+         *
+         * @param {Element} current - The current DOM element
+         * @param {Element} updated - The new DOM element with updates
+         */
+        diffAndPatch(current, updated) {
+            const currentRows = Array.from(current.children);
+            const updatedRows = Array.from(updated.children);
+
+            // Build a map of current rows by their data-id (GridField row identifier)
+            const currentById = new Map();
+            currentRows.forEach((row, index) => {
+                const id = row.getAttribute('data-id') || `pos-${index}`;
+                currentById.set(id, row);
+            });
+
+            // Build ordered list of updated row IDs
+            const updatedIds = updatedRows.map((row, index) =>
+                row.getAttribute('data-id') || `pos-${index}`
+            );
+
+            // Track which current rows we've matched
+            const matched = new Set();
+
+            // Process each updated row in order
+            updatedRows.forEach((newRow, index) => {
+                const id = updatedIds[index];
+                const existingRow = currentById.get(id);
+
+                if (existingRow) {
+                    matched.add(id);
+                    // Row exists - update cells and attributes only if changed
+                    this.diffRowCells(existingRow, newRow);
+                    // Ensure row is in correct position
+                    if (current.children[index] !== existingRow) {
+                        current.insertBefore(existingRow, current.children[index]);
+                    }
+                } else {
+                    // New row - insert at correct position
+                    const clonedRow = newRow.cloneNode(true);
+                    if (current.children[index]) {
+                        current.insertBefore(clonedRow, current.children[index]);
+                    } else {
+                        current.appendChild(clonedRow);
+                    }
+                }
+            });
+
+            // Remove rows that no longer exist
+            currentRows.forEach(row => {
+                const id = row.getAttribute('data-id') ||
+                    `pos-${currentRows.indexOf(row)}`;
+                if (!matched.has(id) && !updatedIds.includes(id)) {
+                    row.remove();
+                }
+            });
+        }
+
+        /**
+         * Diff cells within a row and update only changed cells.
+         * Uses textContent comparison for speed, only falls back to innerHTML when needed.
+         *
+         * @param {Element} currentRow - The current row element
+         * @param {Element} newRow - The new row element with updates
+         */
+        diffRowCells(currentRow, newRow) {
+            const currentCells = Array.from(currentRow.children);
+            const newCells = Array.from(newRow.children);
+
+            // Update existing cells
+            for (let i = 0; i < Math.max(currentCells.length, newCells.length); i++) {
+                if (i < newCells.length && i < currentCells.length) {
+                    const currentCell = currentCells[i];
+                    const newCell = newCells[i];
+                    
+                    // Skip action columns - they get enhanced by JS after page load
+                    // and will always differ between fetched HTML and live DOM
+                    if (currentCell.classList.contains('col-Actions') || 
+                        currentCell.classList.contains('grid-field__col-compact') ||
+                        currentCell.querySelector('.grid-field__icon-action, .gridfield-button-delete, .action-menu')) {
+                        continue;
+                    }
+                    
+                    // First check if textContent differs (fast check)
+                    const currentText = currentCell.textContent;
+                    const newText = newCell.textContent;
+                    
+                    if (currentText !== newText) {
+                        // Content differs - check if it's just text or has HTML structure
+                        if (newCell.children.length === 0 && currentCell.children.length === 0) {
+                            // Both are text-only, use faster textContent
+                            currentCell.textContent = newText;
+                        } else {
+                            // Has child elements, need innerHTML
+                            currentCell.innerHTML = newCell.innerHTML;
+                        }
+                    }
+                    // Sync attributes only if they differ
+                    this.syncAttributesIfChanged(currentCell, newCell);
+                } else if (i >= currentCells.length) {
+                    // New cell - append
+                    currentRow.appendChild(newCells[i].cloneNode(true));
+                } else {
+                    // Extra cell - remove
+                    currentCells[i].remove();
+                }
+            }
+
+            // Sync row attributes only if changed
+            this.syncAttributesIfChanged(currentRow, newRow);
+        }
+
+        /**
+         * Sync attributes from source to target, but only if they actually differ.
+         * Avoids unnecessary DOM mutations that trigger style recalculations.
+         *
+         * @param {Element} target - Element to update
+         * @param {Element} source - Element to copy attributes from
+         */
+        syncAttributesIfChanged(target, source) {
+            let hasChanges = false;
+            
+            // Check if any attributes need updating
+            for (const attr of source.attributes) {
+                if (target.getAttribute(attr.name) !== attr.value) {
+                    hasChanges = true;
+                    break;
+                }
+            }
+            
+            // Check if any attributes need removing
+            if (!hasChanges) {
+                for (const attr of target.attributes) {
+                    if (!source.hasAttribute(attr.name)) {
+                        hasChanges = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Only mutate DOM if there are actual changes
+            if (hasChanges) {
+                // Update/add attributes from source
+                for (const attr of source.attributes) {
+                    if (target.getAttribute(attr.name) !== attr.value) {
+                        target.setAttribute(attr.name, attr.value);
+                    }
+                }
+                // Remove attributes not in source
+                for (const attr of Array.from(target.attributes)) {
+                    if (!source.hasAttribute(attr.name)) {
+                        target.removeAttribute(attr.name);
+                    }
+                }
+            }
+            
+            return hasChanges;
         }
 
         /**

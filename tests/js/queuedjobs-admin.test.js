@@ -431,4 +431,207 @@ describe('QueuedJobsLiveRefresh', () => {
             expect(newButton.classList.contains('active')).toBe(true);
         });
     });
+
+    describe('Diff-based updates', () => {
+        test('only updates changed cells, preserving unchanged DOM nodes', async () => {
+            global.fetch.mockResolvedValue({
+                ok: true,
+                redirected: false,
+                text: () => Promise.resolve(`
+                    <div class="ss-gridfield">
+                        <table class="grid-field__table">
+                            <tbody>
+                                <tr data-id="1"><td>Job 1</td><td>Running</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `)
+            });
+
+            // Set up DOM with initial state
+            document.body.innerHTML = `
+                <form class="queuedjobs-live-enabled">
+                    <div class="cms-content-toolbar">
+                        <button name="showFilter">Filter</button>
+                    </div>
+                    <div class="ss-gridfield">
+                        <table class="grid-field__table">
+                            <tbody>
+                                <tr data-id="1"><td>Job 1</td><td>Queued</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            `;
+
+            require('../../client/src/queuedjobs-admin.js');
+
+            // Get reference to original row element
+            const originalRow = document.querySelector('tr[data-id="1"]');
+            const originalFirstCell = originalRow.querySelector('td');
+
+            const button = document.querySelector('.queuedjobs-live-toggle');
+            button.click();
+
+            jest.advanceTimersByTime(100);
+            await Promise.resolve();
+            await Promise.resolve();
+
+            // Row should be the same DOM node (not replaced)
+            const currentRow = document.querySelector('tr[data-id="1"]');
+            expect(currentRow).toBe(originalRow);
+
+            // First cell unchanged, should be same node
+            const currentFirstCell = currentRow.querySelector('td');
+            expect(currentFirstCell).toBe(originalFirstCell);
+            expect(currentFirstCell.textContent).toBe('Job 1');
+
+            // Second cell changed
+            const cells = currentRow.querySelectorAll('td');
+            expect(cells[1].textContent).toBe('Running');
+        });
+
+        test('adds new rows without replacing existing ones', async () => {
+            global.fetch.mockResolvedValue({
+                ok: true,
+                redirected: false,
+                text: () => Promise.resolve(`
+                    <div class="ss-gridfield">
+                        <table class="grid-field__table">
+                            <tbody>
+                                <tr data-id="1"><td>Job 1</td></tr>
+                                <tr data-id="2"><td>Job 2</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `)
+            });
+
+            document.body.innerHTML = `
+                <form class="queuedjobs-live-enabled">
+                    <div class="cms-content-toolbar">
+                        <button name="showFilter">Filter</button>
+                    </div>
+                    <div class="ss-gridfield">
+                        <table class="grid-field__table">
+                            <tbody>
+                                <tr data-id="1"><td>Job 1</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            `;
+
+            require('../../client/src/queuedjobs-admin.js');
+
+            const originalRow = document.querySelector('tr[data-id="1"]');
+
+            const button = document.querySelector('.queuedjobs-live-toggle');
+            button.click();
+
+            jest.advanceTimersByTime(100);
+            await Promise.resolve();
+            await Promise.resolve();
+
+            // Original row preserved
+            expect(document.querySelector('tr[data-id="1"]')).toBe(originalRow);
+
+            // New row added
+            const rows = document.querySelectorAll('tbody tr');
+            expect(rows.length).toBe(2);
+            expect(document.querySelector('tr[data-id="2"]')).toBeTruthy();
+        });
+
+        test('removes rows that no longer exist', async () => {
+            global.fetch.mockResolvedValue({
+                ok: true,
+                redirected: false,
+                text: () => Promise.resolve(`
+                    <div class="ss-gridfield">
+                        <table class="grid-field__table">
+                            <tbody>
+                                <tr data-id="1"><td>Job 1</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `)
+            });
+
+            document.body.innerHTML = `
+                <form class="queuedjobs-live-enabled">
+                    <div class="cms-content-toolbar">
+                        <button name="showFilter">Filter</button>
+                    </div>
+                    <div class="ss-gridfield">
+                        <table class="grid-field__table">
+                            <tbody>
+                                <tr data-id="1"><td>Job 1</td></tr>
+                                <tr data-id="2"><td>Job 2</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            `;
+
+            require('../../client/src/queuedjobs-admin.js');
+
+            const button = document.querySelector('.queuedjobs-live-toggle');
+            button.click();
+
+            jest.advanceTimersByTime(100);
+            await Promise.resolve();
+            await Promise.resolve();
+
+            const rows = document.querySelectorAll('tbody tr');
+            expect(rows.length).toBe(1);
+            expect(document.querySelector('tr[data-id="2"]')).toBeNull();
+        });
+
+        test('updates row attributes when status changes', async () => {
+            global.fetch.mockResolvedValue({
+                ok: true,
+                redirected: false,
+                text: () => Promise.resolve(`
+                    <div class="ss-gridfield">
+                        <table class="grid-field__table">
+                            <tbody>
+                                <tr data-id="1" class="status-complete"><td>Job 1</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                `)
+            });
+
+            document.body.innerHTML = `
+                <form class="queuedjobs-live-enabled">
+                    <div class="cms-content-toolbar">
+                        <button name="showFilter">Filter</button>
+                    </div>
+                    <div class="ss-gridfield">
+                        <table class="grid-field__table">
+                            <tbody>
+                                <tr data-id="1" class="status-running"><td>Job 1</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            `;
+
+            require('../../client/src/queuedjobs-admin.js');
+
+            const originalRow = document.querySelector('tr[data-id="1"]');
+            expect(originalRow.className).toBe('status-running');
+
+            const button = document.querySelector('.queuedjobs-live-toggle');
+            button.click();
+
+            jest.advanceTimersByTime(100);
+            await Promise.resolve();
+            await Promise.resolve();
+
+            // Same DOM node but class updated
+            expect(document.querySelector('tr[data-id="1"]')).toBe(originalRow);
+            expect(originalRow.className).toBe('status-complete');
+        });
+    });
 });

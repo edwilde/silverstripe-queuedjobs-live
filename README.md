@@ -6,6 +6,7 @@ Adds live auto-refresh capability to the SilverStripe Queued Jobs admin panel.
 
 - Play/pause toggle button positioned next to the filter button
 - Auto-refresh every 5 seconds without full page reload
+- Minimal DOM updates using intelligent diffing (only changed cells are updated, no false positives from action buttons)
 - Subtle refresh indicator in the button icon (no intrusive popups)
 - Preserves scroll position and focus state
 - Smart pausing (10 seconds) on user interaction
