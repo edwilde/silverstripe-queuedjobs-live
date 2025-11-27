@@ -2,6 +2,10 @@
 
 Adds live auto-refresh capability to the SilverStripe Queued Jobs admin panel.
 
+## Demo
+
+![Demo of SilverStripe Queued Jobs Live module showing auto-refreshing jobs grid with play/pause button](docs/img/queuedjobs-live.gif)
+
 ## Features
 
 - Play/pause toggle button positioned next to the filter button

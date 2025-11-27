@@ -434,10 +434,10 @@
                 // Quick check: compare normalized HTML to detect any changes
                 const currentHtml = this.normalizeHtml(currentTbody.innerHTML);
                 const newHtml = this.normalizeHtml(newTbody.innerHTML);
-                
+
                 const currentFootHtml = currentTfoot ? this.normalizeHtml(currentTfoot.innerHTML) : '';
                 const newFootHtml = newTfoot ? this.normalizeHtml(newTfoot.innerHTML) : '';
-                
+
                 // If nothing changed, don't touch the DOM at all
                 if (currentHtml === newHtml && currentFootHtml === newFootHtml) {
                     return;
@@ -575,19 +575,19 @@
                 if (i < newCells.length && i < currentCells.length) {
                     const currentCell = currentCells[i];
                     const newCell = newCells[i];
-                    
+
                     // Skip action columns - they get enhanced by JS after page load
                     // and will always differ between fetched HTML and live DOM
-                    if (currentCell.classList.contains('col-Actions') || 
+                    if (currentCell.classList.contains('col-Actions') ||
                         currentCell.classList.contains('grid-field__col-compact') ||
                         currentCell.querySelector('.grid-field__icon-action, .gridfield-button-delete, .action-menu')) {
                         continue;
                     }
-                    
+
                     // First check if textContent differs (fast check)
                     const currentText = currentCell.textContent;
                     const newText = newCell.textContent;
-                    
+
                     if (currentText !== newText) {
                         // Content differs - check if it's just text or has HTML structure
                         if (newCell.children.length === 0 && currentCell.children.length === 0) {
@@ -622,7 +622,7 @@
          */
         syncAttributesIfChanged(target, source) {
             let hasChanges = false;
-            
+
             // Check if any attributes need updating
             for (const attr of source.attributes) {
                 if (target.getAttribute(attr.name) !== attr.value) {
@@ -630,7 +630,7 @@
                     break;
                 }
             }
-            
+
             // Check if any attributes need removing
             if (!hasChanges) {
                 for (const attr of target.attributes) {
@@ -640,7 +640,7 @@
                     }
                 }
             }
-            
+
             // Only mutate DOM if there are actual changes
             if (hasChanges) {
                 // Update/add attributes from source
@@ -656,7 +656,7 @@
                     }
                 }
             }
-            
+
             return hasChanges;
         }
 
