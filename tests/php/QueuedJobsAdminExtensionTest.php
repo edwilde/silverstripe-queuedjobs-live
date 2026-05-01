@@ -62,7 +62,7 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
 
         $hasQueuedJobsJS = false;
         foreach ($javascript as $file => $attrs) {
-            if (strpos($file, 'queuedjobs-admin.js') !== false) {
+            if (str_contains((string) $file, 'queuedjobs-admin.js')) {
                 $hasQueuedJobsJS = true;
                 break;
             }
@@ -94,7 +94,7 @@ class QueuedJobsAdminExtensionTest extends SapphireTest
 
         $hasQueuedJobsCSS = false;
         foreach ($css as $file => $attrs) {
-            if (strpos($file, 'queuedjobs-admin.css') !== false) {
+            if (str_contains((string) $file, 'queuedjobs-admin.css')) {
                 $hasQueuedJobsCSS = true;
                 break;
             }
