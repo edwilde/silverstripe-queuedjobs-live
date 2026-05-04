@@ -17,7 +17,7 @@ composer require edwilde/silverstripe-queuedjobs-live
 1. Clone or download this repository into your SilverStripe project
 2. Place it in the root directory or vendor folder
 3. Run `composer install` or `composer update`
-4. Run `dev/build?flush=all` in your browser
+4. Run `db:build?flush=all` in your browser
 
 ## Post-Installation
 
@@ -40,7 +40,7 @@ No additional configuration is required.
 ### Button not appearing
 
 - Clear your browser cache
-- Run `dev/build?flush=all`
+- Run `db:build?flush=all`
 - Check browser console for JavaScript errors
 - Verify the module is installed correctly with `composer show`
 
